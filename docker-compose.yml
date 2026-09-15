@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: rica
       POSTGRES_PASSWORD: rica
     ports:
-      - "305:3005"
+      - "3005:5432"
     volumes:
       - rica-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +24,7 @@ services:
     environment:
       MONGO_INITDB_DATABASE: rica
     ports:
-      - "3007:3007"
+      - "3006:27017"
     volumes:
       - rica-mongo-data:/data/db
     healthcheck:
@@ -42,7 +42,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://rica-db:5432/rica
       SPRING_MONGODB_URI: mongodb://rica-mongo:27017/rica
     ports:
-      - "8080:8080"
+      - "4000:8080"
     depends_on:
       rica-db:
         condition: service_healthy
@@ -55,7 +55,7 @@ services:
     container_name: rica-frontend
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "5000:80"
     depends_on:
       - rica-api
 

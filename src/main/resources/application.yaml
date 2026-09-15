@@ -24,4 +24,4 @@ spring:
     locations: classpath:db/migration
 
   mongodb:
-    uri: mongodb://localhost:3007/rica
+    uri: mongodb://localhost:3006/rica
