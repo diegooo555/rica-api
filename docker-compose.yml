@@ -1,0 +1,64 @@
+services:
+  rica-db:
+    image: postgres:16
+    container_name: rica-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rica
+      POSTGRES_USER: rica
+      POSTGRES_PASSWORD: rica
+    ports:
+      - "305:3005"
+    volumes:
+      - rica-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rica -d rica"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rica-mongo:
+    image: mongo:7
+    container_name: rica-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: rica
+    ports:
+      - "3007:3007"
+    volumes:
+      - rica-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rica-api:
+    build:
+      context: .
+    container_name: rica-api
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://rica-db:5432/rica
+      SPRING_MONGODB_URI: mongodb://rica-mongo:27017/rica
+    ports:
+      - "8080:8080"
+    depends_on:
+      rica-db:
+        condition: service_healthy
+      rica-mongo:
+        condition: service_healthy
+
+  rica-frontend:
+    build:
+      context: ../rica-frontend
+    container_name: rica-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - rica-api
+
+volumes:
+  rica-db-data:
+  rica-mongo-data:

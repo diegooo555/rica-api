@@ -1,0 +1,27 @@
+meta {
+  name: Crear publicación (investigador inexistente)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/publicaciones
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "investigadorCorreo": "nadie@uptc.edu.co",
+    "titulo": "Publicación de prueba",
+    "tipo": "ponencia",
+    "anio": 2025,
+    "detalles": {
+      "evento": "Congreso Nacional de Ingeniería de Software",
+      "ciudad": "Tunja"
+    }
+  }
+}

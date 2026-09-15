@@ -1,0 +1,14 @@
+meta {
+  name: Listar publicaciones por investigador
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/publicaciones?investigadorCorreo=ana.torres@uptc.edu.co
+  body: none
+}
+
+params:query {
+  investigadorCorreo: ana.torres@uptc.edu.co
+}

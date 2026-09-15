@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: rica-api
+
+  datasource:
+    url: jdbc:postgresql://localhost:3005/rica
+    username: rica
+    password: rica
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  mongodb:
+    uri: mongodb://localhost:3007/rica

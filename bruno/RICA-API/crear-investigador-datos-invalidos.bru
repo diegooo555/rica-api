@@ -1,0 +1,22 @@
+meta {
+  name: Crear investigador (datos inválidos)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/investigadores
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "nombreCompleto": "",
+    "correoInstitucional": "no-es-un-correo",
+    "grupoInvestigacion": ""
+  }
+}

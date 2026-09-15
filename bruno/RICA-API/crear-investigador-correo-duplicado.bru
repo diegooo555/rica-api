@@ -1,0 +1,22 @@
+meta {
+  name: Crear investigador (correo duplicado)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/investigadores
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "nombreCompleto": "Ana Torres Duplicada",
+    "correoInstitucional": "ana.torres@uptc.edu.co",
+    "grupoInvestigacion": "GIT-UPTC"
+  }
+}

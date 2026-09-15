@@ -1,0 +1,27 @@
+meta {
+  name: Crear publicación (libro)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/publicaciones
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "investigadorCorreo": "ana.torres@uptc.edu.co",
+    "titulo": "Fundamentos de arquitectura de software para sistemas académicos",
+    "tipo": "libro",
+    "anio": 2024,
+    "detalles": {
+      "editorial": "Editorial UPTC",
+      "isbn": "978-958-660-512-3"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Crear publicación (artículo)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/publicaciones
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "investigadorCorreo": "ana.torres@uptc.edu.co",
+    "titulo": "Redes de colaboración académica en instituciones públicas",
+    "tipo": "articulo",
+    "anio": 2025,
+    "detalles": {
+      "revista": "Revista Colombiana de Computación",
+      "doi": "10.1234/rcc.2025.017"
+    }
+  }
+}
