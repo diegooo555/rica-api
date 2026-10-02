@@ -8,4 +8,6 @@ public interface PublicacionRepository extends MongoRepository<Publicacion, Stri
 
     List<Publicacion> findByInvestigadorCorreo(String investigadorCorreo);
 
+    long countByInvestigadorCorreoAndAnio(String investigadorCorreo, Integer anio);
+
 }
