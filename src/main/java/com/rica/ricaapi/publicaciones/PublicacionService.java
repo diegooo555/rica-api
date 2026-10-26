@@ -20,7 +20,7 @@ public class PublicacionService {
     }
 
     public Publicacion registrar(Publicacion publicacion) {
-        if (!investigadorRepository.existsByCorreoInstitucional(publicacion.getInvestigadorCorreo())) {
+        if (!investigadorRepository.existsByCorreoInstitucional_Valor(publicacion.getInvestigadorCorreo())) {
             throw new RecursoNoEncontradoException(
                     "No existe un investigador con correo " + publicacion.getInvestigadorCorreo());
         }
