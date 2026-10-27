@@ -14,14 +14,14 @@ import static org.mockito.Mockito.when;
 class InvestigadorFactoryTest {
 
     @Mock
-    private InvestigadorRepository investigadorRepository;
+    private RepositorioInvestigadores repositorioInvestigadores;
 
     @InjectMocks
     private InvestigadorFactory investigadorFactory;
 
     @Test
     void creaUnInvestigadorNuevoSinIdCuandoElCorreoEstaLibre() {
-        when(investigadorRepository.existsByCorreoInstitucional_Valor("ana.torres@uptc.edu.co")).thenReturn(false);
+        when(repositorioInvestigadores.existeCorreo("ana.torres@uptc.edu.co")).thenReturn(false);
 
         Investigador investigador = investigadorFactory.crear("Ana Torres", "ana.torres@uptc.edu.co", "GIT-UPTC");
 
@@ -31,7 +31,7 @@ class InvestigadorFactoryTest {
 
     @Test
     void rechazaUnCorreoInstitucionalDuplicado() {
-        when(investigadorRepository.existsByCorreoInstitucional_Valor("ana.torres@uptc.edu.co")).thenReturn(true);
+        when(repositorioInvestigadores.existeCorreo("ana.torres@uptc.edu.co")).thenReturn(true);
 
         assertThatThrownBy(() -> investigadorFactory.crear("Ana Torres", "ana.torres@uptc.edu.co", "GIT-UPTC"))
                 .isInstanceOf(CorreoDuplicadoException.class);

@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 class InvestigadorServiceTest {
 
     @Mock
-    private InvestigadorRepository investigadorRepository;
+    private RepositorioInvestigadores repositorioInvestigadores;
 
     @Mock
     private InvestigadorFactory investigadorFactory;
@@ -33,7 +33,7 @@ class InvestigadorServiceTest {
     void buscarPorIdDevuelveElInvestigadorCuandoExiste() {
         Investigador investigador = new Investigador(1L, "Ana Torres",
                 new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT-UPTC");
-        when(investigadorRepository.findById(1L)).thenReturn(Optional.of(investigador));
+        when(repositorioInvestigadores.buscarPorId(1L)).thenReturn(Optional.of(investigador));
 
         Investigador resultado = investigadorService.buscarPorId(1L);
 
@@ -42,7 +42,7 @@ class InvestigadorServiceTest {
 
     @Test
     void buscarPorIdLanzaExcepcionCuandoNoExiste() {
-        when(investigadorRepository.findById(99L)).thenReturn(Optional.empty());
+        when(repositorioInvestigadores.buscarPorId(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> investigadorService.buscarPorId(99L))
                 .isInstanceOf(RecursoNoEncontradoException.class)
@@ -54,12 +54,12 @@ class InvestigadorServiceTest {
         Investigador creado = new Investigador(null, "Carlos Ruiz",
                 new CorreoInstitucional("carlos.ruiz@uptc.edu.co"), "GIT-UPTC");
         when(investigadorFactory.crear("Carlos Ruiz", "carlos.ruiz@uptc.edu.co", "GIT-UPTC")).thenReturn(creado);
-        when(investigadorRepository.save(creado)).thenReturn(creado);
+        when(repositorioInvestigadores.guardar(creado)).thenReturn(creado);
 
         Investigador resultado = investigadorService.registrar("Carlos Ruiz", "carlos.ruiz@uptc.edu.co", "GIT-UPTC");
 
         assertThat(resultado).isSameAs(creado);
-        verify(investigadorRepository).save(creado);
+        verify(repositorioInvestigadores).guardar(creado);
     }
 
     @Test
@@ -70,7 +70,7 @@ class InvestigadorServiceTest {
         assertThatThrownBy(() -> investigadorService.registrar("Carlos Ruiz", "carlos.ruiz@uptc.edu.co", "GIT-UPTC"))
                 .isInstanceOf(CorreoDuplicadoException.class);
 
-        verify(investigadorRepository, never()).save(any());
+        verify(repositorioInvestigadores, never()).guardar(any());
     }
 
 }
