@@ -7,7 +7,7 @@ import com.rica.ricaapi.compartido.RecursoNoEncontradoException;
 import java.util.List;
 
 @Service
-public class InvestigadorService {
+public class InvestigadorService implements InvestigadorUseCase {
 
     private final InvestigadorRepository investigadorRepository;
     private final InvestigadorFactory investigadorFactory;
@@ -17,16 +17,19 @@ public class InvestigadorService {
         this.investigadorFactory = investigadorFactory;
     }
 
+    @Override
     public List<Investigador> listarTodos() {
         return investigadorRepository.findAll();
     }
 
+    @Override
     public Investigador buscarPorId(Long id) {
         return investigadorRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "No existe un investigador con id " + id));
     }
 
+    @Override
     public Investigador registrar(String nombreCompleto, String correoInstitucional, String grupoInvestigacion) {
         Investigador investigador = investigadorFactory.crear(nombreCompleto, correoInstitucional, grupoInvestigacion);
         return investigadorRepository.save(investigador);
