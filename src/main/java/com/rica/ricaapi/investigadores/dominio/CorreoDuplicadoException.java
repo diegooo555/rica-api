@@ -1,4 +1,4 @@
-package com.rica.ricaapi.investigadores;
+package com.rica.ricaapi.investigadores.dominio;
 
 public class CorreoDuplicadoException extends RuntimeException {
 

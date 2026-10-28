@@ -1,4 +1,6 @@
-package com.rica.ricaapi.investigadores;
+package com.rica.ricaapi.investigadores.aplicacion;
+
+import com.rica.ricaapi.investigadores.dominio.Investigador;
 
 import java.util.List;
 import java.util.Optional;

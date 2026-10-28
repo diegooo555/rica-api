@@ -1,7 +1,7 @@
 package com.rica.ricaapi.publicaciones;
 
-import com.rica.ricaapi.investigadores.CorreoInstitucional;
-import com.rica.ricaapi.investigadores.Investigador;
+import com.rica.ricaapi.investigadores.dominio.CorreoInstitucional;
+import com.rica.ricaapi.investigadores.dominio.Investigador;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -1,6 +1,6 @@
 package com.rica.ricaapi.publicaciones;
 
-import com.rica.ricaapi.investigadores.Investigador;
+import com.rica.ricaapi.investigadores.dominio.Investigador;
 import org.springframework.stereotype.Service;
 
 @Service

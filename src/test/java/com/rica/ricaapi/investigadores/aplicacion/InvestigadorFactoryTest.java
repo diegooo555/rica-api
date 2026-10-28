@@ -1,4 +1,7 @@
-package com.rica.ricaapi.investigadores;
+package com.rica.ricaapi.investigadores.aplicacion;
+
+import com.rica.ricaapi.investigadores.dominio.CorreoDuplicadoException;
+import com.rica.ricaapi.investigadores.dominio.Investigador;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

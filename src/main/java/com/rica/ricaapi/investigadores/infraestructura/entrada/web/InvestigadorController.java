@@ -1,4 +1,7 @@
-package com.rica.ricaapi.investigadores;
+package com.rica.ricaapi.investigadores.infraestructura.entrada.web;
+
+import com.rica.ricaapi.investigadores.aplicacion.InvestigadorUseCase;
+import com.rica.ricaapi.investigadores.dominio.Investigador;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
