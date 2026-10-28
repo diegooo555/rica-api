@@ -30,6 +30,9 @@ class InvestigadorServiceTest {
     @Mock
     private InvestigadorFactory investigadorFactory;
 
+    @Mock
+    private ReportadorMinCiencias reportadorMinCiencias;
+
     @InjectMocks
     private InvestigadorService investigadorService;
 
@@ -64,6 +67,7 @@ class InvestigadorServiceTest {
 
         assertThat(resultado).isSameAs(creado);
         verify(repositorioInvestigadores).guardar(creado);
+        verify(reportadorMinCiencias).enviar(creado);
     }
 
     @Test

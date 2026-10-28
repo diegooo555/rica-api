@@ -13,10 +13,13 @@ public class InvestigadorService implements InvestigadorUseCase {
 
     private final RepositorioInvestigadores repositorioInvestigadores;
     private final InvestigadorFactory investigadorFactory;
+    private final ReportadorMinCiencias reportadorMinCiencias;
 
-    public InvestigadorService(RepositorioInvestigadores repositorioInvestigadores, InvestigadorFactory investigadorFactory) {
+    public InvestigadorService(RepositorioInvestigadores repositorioInvestigadores, InvestigadorFactory investigadorFactory,
+            ReportadorMinCiencias reportadorMinCiencias) {
         this.repositorioInvestigadores = repositorioInvestigadores;
         this.investigadorFactory = investigadorFactory;
+        this.reportadorMinCiencias = reportadorMinCiencias;
     }
 
     @Override
@@ -34,7 +37,9 @@ public class InvestigadorService implements InvestigadorUseCase {
     @Override
     public Investigador registrar(String nombreCompleto, String correoInstitucional, String grupoInvestigacion) {
         Investigador investigador = investigadorFactory.crear(nombreCompleto, correoInstitucional, grupoInvestigacion);
-        return repositorioInvestigadores.guardar(investigador);
+        Investigador guardado = repositorioInvestigadores.guardar(investigador);
+        reportadorMinCiencias.enviar(guardado);
+        return guardado;
     }
 
 }
