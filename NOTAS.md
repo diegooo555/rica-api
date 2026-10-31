@@ -34,3 +34,41 @@
   `@SpringBootTest`, sin `@Mock` y sin base de datos: el núcleo solo necesita algo que cumpla el contrato del puerto.
 - Pendiente detectado: `PublicacionService` todavía importa `InvestigadorRepository` de la infraestructura de otro
   subdominio. Es exactamente la costura que se corta en el Taller de la Lección 5.
+
+## Taller Lección 5 · Descomposición real de rica-api
+
+### Paso 1 · El corte: qué va en cada servicio
+
+| Paquete / clase actual | Destino |
+|---|---|
+| `investigadores.*` (dominio, aplicación, infraestructura) | `investigadores-service` |
+| `publicaciones.*` | `publicaciones-service` |
+| `compartido.GlobalExceptionHandler`, `RecursoNoEncontradoException` | Se duplica en ambos: cada servicio tiene su propio manejo de errores |
+| `plataforma.StatusController`, `CorsConfig` | Se duplica en ambos, adaptado (cada servicio expone su propio `/api/status`) |
+| `plataforma.ArranqueInformativo`, `SaludoInstitucionalService` | Se descarta: era una demostración de IoC/DI sin valor de negocio |
+
+**Sobre la duplicación.** Es la primera consecuencia real de *Database per Service* y despliegue independiente.
+Compartir un `@ControllerAdvice` exigiría una librería común versionada aparte (un *shared kernel*). Para dos
+servicios pequeños la duplicación es más barata que el acoplamiento de versiones; si el número de servicios crece,
+vale la pena extraer un módulo `rica-commons`.
+
+### Decisiones tomadas durante el corte
+
+- `LimitePublicacionesAnualesService` sí cruzaba dominios: recibía la entidad `Investigador`. En
+  `publicaciones-service` pasa a recibir `(investigadorCorreo, anio)`, que es todo lo que la regla necesita.
+  La regla ahora se aplica de verdad en `PublicacionService.registrar` y responde **422** con `LimiteAnualExcedidoException`.
+- `PublicacionService` ya no conoce `InvestigadorRepository`: depende del puerto `VerificadorInvestigador`.
+  El adaptador `VerificadorInvestigadorPendiente` acepta cualquier correo a propósito: la dependencia entre dominios
+  no desapareció, se hizo **visible**. Se resuelve en el Taller de la Lección 6.
+- `PublicacionResponse` ahora incluye el `id` (antes la cabecera `Location` apuntaba a un id que el cuerpo no mostraba).
+- Monorepo: los dos servicios viven en `rica-microservicios/` dentro de este mismo repositorio de GitHub, cada uno con
+  su propio `pom.xml`, Maven Wrapper y `docker-compose.yml`.
+
+### Evidencia (paso 5)
+
+```text
+GET  :8080/api/status        -> {"servicio":"investigadores-service","estado":"operativo"}
+GET  :8081/api/status        -> {"servicio":"publicaciones-service","estado":"operativo"}
+POST :8080/api/investigadores -> 201
+POST :8081/api/publicaciones (correo inventado) -> 201   <- brecha esperada, la cierra la Lección 6
+```
