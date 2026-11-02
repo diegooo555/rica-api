@@ -28,6 +28,11 @@ public class InvestigadorRepositoryJpaAdapter implements RepositorioInvestigador
     }
 
     @Override
+    public Optional<Investigador> buscarPorCorreo(String correoInstitucional) {
+        return investigadorRepository.findByCorreoInstitucional_Valor(correoInstitucional);
+    }
+
+    @Override
     public boolean existeCorreo(String correoInstitucional) {
         return investigadorRepository.existsByCorreoInstitucional_Valor(correoInstitucional);
     }

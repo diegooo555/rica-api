@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.rica.investigadoresservice.compartido.RecursoNoEncontradoException;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class InvestigadorService implements InvestigadorUseCase {
@@ -32,6 +33,11 @@ public class InvestigadorService implements InvestigadorUseCase {
         return repositorioInvestigadores.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "No existe un investigador con id " + id));
+    }
+
+    @Override
+    public Optional<Investigador> buscarPorCorreo(String correoInstitucional) {
+        return repositorioInvestigadores.buscarPorCorreo(correoInstitucional);
     }
 
     @Override

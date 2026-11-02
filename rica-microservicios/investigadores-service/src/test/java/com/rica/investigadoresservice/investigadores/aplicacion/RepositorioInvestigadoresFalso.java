@@ -20,6 +20,13 @@ class RepositorioInvestigadoresFalso implements RepositorioInvestigadores {
     }
 
     @Override
+    public Optional<Investigador> buscarPorCorreo(String correoInstitucional) {
+        return almacen.values().stream()
+                .filter(i -> i.getCorreoInstitucional().valor().equals(correoInstitucional))
+                .findFirst();
+    }
+
+    @Override
     public boolean existeCorreo(String correoInstitucional) {
         return almacen.values().stream()
                 .anyMatch(i -> i.getCorreoInstitucional().valor().equals(correoInstitucional));
