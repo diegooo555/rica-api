@@ -1,0 +1,30 @@
+// Contrato gRPC entre publicaciones-service (cliente) e investigadores-service (servidor).
+// Ambos servicios guardan una copia idéntica: lo que debe coincidir es el "package" y los mensajes,
+// no el java_package, que cada servicio elige a su gusto.
+syntax = "proto3";
+
+package rica.investigadores;
+
+option java_package = "com.rica.publicacionesservice.grpc";
+option java_multiple_files = true;
+option java_outer_classname = "InvestigadorProto";
+
+service InvestigadorGrpc {
+  // Consulta por id (la del ejemplo de la guía de la Lección 6).
+  rpc ExisteInvestigador (InvestigadorRequest) returns (InvestigadorResponse) {}
+  // Consulta por correo institucional: es la que necesita publicaciones-service.
+  rpc ExisteInvestigadorPorCorreo (CorreoRequest) returns (InvestigadorResponse) {}
+}
+
+message InvestigadorRequest {
+  int64 id = 1;
+}
+
+message CorreoRequest {
+  string correoInstitucional = 1;
+}
+
+message InvestigadorResponse {
+  bool existe = 1;
+  string nombreCompleto = 2;
+}

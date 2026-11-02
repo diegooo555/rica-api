@@ -20,6 +20,11 @@ public class GlobalExceptionHandler {
         return construirRespuesta(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> manejarServicioNoDisponible(ServicioNoDisponibleException ex) {
+        return construirRespuesta(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
     @ExceptionHandler(LimiteAnualExcedidoException.class)
     public ResponseEntity<Map<String, Object>> manejarLimiteAnual(LimiteAnualExcedidoException ex) {
         return construirRespuesta(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());

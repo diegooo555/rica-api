@@ -7,3 +7,17 @@ spring:
 
   mongodb:
     uri: mongodb://localhost:27017/rica
+
+  grpc:
+    client:
+      channel:
+        investigadores:
+          # Servidor gRPC de investigadores-service
+          target: static://localhost:9090
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
