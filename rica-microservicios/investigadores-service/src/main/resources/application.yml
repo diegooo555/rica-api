@@ -19,6 +19,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: investigadores-service
+      auto-offset-reset: earliest
+
   grpc:
     server:
       # publicaciones-service consulta aquí si un investigador existe

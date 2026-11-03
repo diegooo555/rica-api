@@ -33,6 +33,9 @@ class InvestigadorServiceTest {
     @Mock
     private ReportadorMinCiencias reportadorMinCiencias;
 
+    @Mock
+    private PublicadorEventos publicadorEventos;
+
     @InjectMocks
     private InvestigadorService investigadorService;
 
@@ -58,7 +61,7 @@ class InvestigadorServiceTest {
 
     @Test
     void registrarDelegaLaCreacionEnLaFactoryYGuardaElResultado() {
-        Investigador creado = new Investigador(null, "Carlos Ruiz",
+        Investigador creado = new Investigador(7L, "Carlos Ruiz",
                 new CorreoInstitucional("carlos.ruiz@uptc.edu.co"), "GIT-UPTC");
         when(investigadorFactory.crear("Carlos Ruiz", "carlos.ruiz@uptc.edu.co", "GIT-UPTC")).thenReturn(creado);
         when(repositorioInvestigadores.guardar(creado)).thenReturn(creado);
@@ -68,6 +71,11 @@ class InvestigadorServiceTest {
         assertThat(resultado).isSameAs(creado);
         verify(repositorioInvestigadores).guardar(creado);
         verify(reportadorMinCiencias).enviar(creado);
+        verify(publicadorEventos).publicar("investigadores.registrados", "carlos.ruiz@uptc.edu.co", java.util.Map.of(
+                "id", 7L,
+                "correoInstitucional", "carlos.ruiz@uptc.edu.co",
+                "nombreCompleto", "Carlos Ruiz",
+                "grupoInvestigacion", "GIT-UPTC"));
     }
 
     @Test
@@ -79,6 +87,7 @@ class InvestigadorServiceTest {
                 .isInstanceOf(CorreoDuplicadoException.class);
 
         verify(repositorioInvestigadores, never()).guardar(any());
+        verify(publicadorEventos, never()).publicar(any(), any(), any());
     }
 
 }
