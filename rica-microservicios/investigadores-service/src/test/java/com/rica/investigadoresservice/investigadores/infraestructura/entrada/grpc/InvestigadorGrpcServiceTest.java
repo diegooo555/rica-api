@@ -57,4 +57,17 @@ class InvestigadorGrpcServiceTest {
         assertThat(captura.respuestas.getFirst().getExiste()).isFalse();
         assertThat(captura.respuestas.getFirst().getNombreCompleto()).isEmpty();
     }
+
+    @Test
+    void unInvestigadorEnEliminacionYaNoAceptaPublicaciones() {
+        Investigador ana = new Investigador(1L, "Ana Torres", new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT");
+        ana.marcarEnEliminacion();
+        when(useCase.buscarPorCorreo("ana.torres@uptc.edu.co")).thenReturn(Optional.of(ana));
+        Captura captura = new Captura();
+
+        servicio.existeInvestigadorPorCorreo(
+                CorreoRequest.newBuilder().setCorreoInstitucional("ana.torres@uptc.edu.co").build(), captura);
+
+        assertThat(captura.respuestas.getFirst().getExiste()).isFalse();
+    }
 }

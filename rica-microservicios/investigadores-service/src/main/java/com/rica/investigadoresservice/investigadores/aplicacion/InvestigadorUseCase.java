@@ -14,4 +14,8 @@ public interface InvestigadorUseCase {
     Optional<Investigador> buscarPorCorreo(String correoInstitucional);
 
     Investigador registrar(String nombreCompleto, String correoInstitucional, String grupoInvestigacion);
+
+    void iniciarEliminacion(Long id);
+
+    void confirmarEliminacion(String correoInstitucional);
 }

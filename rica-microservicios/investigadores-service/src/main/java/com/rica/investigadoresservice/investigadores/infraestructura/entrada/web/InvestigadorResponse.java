@@ -5,14 +5,16 @@ public class InvestigadorResponse {
     private Long id;
     private String nombreCompleto;
     private String grupoInvestigacion;
+    private String estado;
 
     public InvestigadorResponse() {
     }
 
-    public InvestigadorResponse(Long id, String nombreCompleto, String grupoInvestigacion) {
+    public InvestigadorResponse(Long id, String nombreCompleto, String grupoInvestigacion, String estado) {
         this.id = id;
         this.nombreCompleto = nombreCompleto;
         this.grupoInvestigacion = grupoInvestigacion;
+        this.estado = estado;
     }
 
     public Long getId() {
@@ -37,6 +39,14 @@ public class InvestigadorResponse {
 
     public void setGrupoInvestigacion(String grupoInvestigacion) {
         this.grupoInvestigacion = grupoInvestigacion;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
 }

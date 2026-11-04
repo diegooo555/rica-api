@@ -31,4 +31,19 @@ class InvestigadorServiceConFalsoTest {
                 .isInstanceOf(CorreoDuplicadoException.class);
         assertThat(service.listarTodos()).hasSize(1);
     }
+
+    @Test
+    void laSagaDeEliminacionCompletaBorraAlInvestigador() {
+        RepositorioInvestigadoresFalso repositorio = new RepositorioInvestigadoresFalso();
+        InvestigadorService service = new InvestigadorService(repositorio, new InvestigadorFactory(repositorio),
+                investigador -> { }, (topico, clave, contenido) -> { });
+        Investigador ana = service.registrar("Ana Torres", "ana.torres@uptc.edu.co", "GIT-UPTC");
+
+        service.iniciarEliminacion(ana.getId());
+        assertThat(service.buscarPorCorreo("ana.torres@uptc.edu.co")).get()
+                .extracting(Investigador::estaEnEliminacion).isEqualTo(true);
+
+        service.confirmarEliminacion("ana.torres@uptc.edu.co");
+        assertThat(service.listarTodos()).isEmpty();
+    }
 }

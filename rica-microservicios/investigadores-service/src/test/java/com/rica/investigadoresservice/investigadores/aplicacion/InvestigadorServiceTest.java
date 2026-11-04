@@ -90,4 +90,43 @@ class InvestigadorServiceTest {
         verify(publicadorEventos, never()).publicar(any(), any(), any());
     }
 
+    @Test
+    void iniciarEliminacionBloqueaAlInvestigadorYPublicaElEvento() {
+        Investigador ana = new Investigador(1L, "Ana Torres", new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT-UPTC");
+        when(repositorioInvestigadores.buscarPorId(1L)).thenReturn(Optional.of(ana));
+
+        investigadorService.iniciarEliminacion(1L);
+
+        assertThat(ana.estaEnEliminacion()).isTrue();
+        verify(repositorioInvestigadores).guardar(ana);
+        verify(publicadorEventos).publicar("investigadores.en-eliminacion", "ana.torres@uptc.edu.co",
+                java.util.Map.of("id", 1L, "correoInstitucional", "ana.torres@uptc.edu.co"));
+    }
+
+    @Test
+    void iniciarEliminacionDosVecesNoPublicaUnSegundoEvento() {
+        Investigador ana = new Investigador(1L, "Ana Torres", new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT-UPTC");
+        ana.marcarEnEliminacion();
+        when(repositorioInvestigadores.buscarPorId(1L)).thenReturn(Optional.of(ana));
+
+        investigadorService.iniciarEliminacion(1L);
+
+        verify(publicadorEventos, never()).publicar(any(), any(), any());
+    }
+
+    @Test
+    void confirmarEliminacionBorraSoloSiElInvestigadorEstaEnEliminacion() {
+        Investigador enEliminacion = new Investigador(1L, "Ana Torres", new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT-UPTC");
+        enEliminacion.marcarEnEliminacion();
+        Investigador activo = new Investigador(2L, "Luis Mora", new CorreoInstitucional("luis.mora@uptc.edu.co"), "GIT-UPTC");
+        when(repositorioInvestigadores.buscarPorCorreo("ana.torres@uptc.edu.co")).thenReturn(Optional.of(enEliminacion));
+        when(repositorioInvestigadores.buscarPorCorreo("luis.mora@uptc.edu.co")).thenReturn(Optional.of(activo));
+
+        investigadorService.confirmarEliminacion("ana.torres@uptc.edu.co");
+        investigadorService.confirmarEliminacion("luis.mora@uptc.edu.co");
+
+        verify(repositorioInvestigadores).eliminar(enEliminacion);
+        verify(repositorioInvestigadores, never()).eliminar(activo);
+    }
+
 }

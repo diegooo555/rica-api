@@ -59,4 +59,28 @@ public class InvestigadorService implements InvestigadorUseCase {
         return guardado;
     }
 
+    /** Paso 1 de la Saga (coreografía): bloquear al investigador y avisar a los demás servicios. */
+    @Override
+    @Transactional
+    public void iniciarEliminacion(Long id) {
+        Investigador investigador = buscarPorId(id);
+        if (investigador.estaEnEliminacion()) {
+            return; // la Saga ya está en curso: repetir la petición no publica otro evento
+        }
+        investigador.marcarEnEliminacion();
+        repositorioInvestigadores.guardar(investigador);
+        publicadorEventos.publicar("investigadores.en-eliminacion", investigador.getCorreoInstitucional().valor(), Map.of(
+                "id", investigador.getId(),
+                "correoInstitucional", investigador.getCorreoInstitucional().valor()));
+    }
+
+    /** Paso 3 de la Saga: publicaciones-service confirmó, ahora sí se borra. Idempotente. */
+    @Override
+    @Transactional
+    public void confirmarEliminacion(String correoInstitucional) {
+        repositorioInvestigadores.buscarPorCorreo(correoInstitucional)
+                .filter(Investigador::estaEnEliminacion)
+                .ifPresent(repositorioInvestigadores::eliminar);
+    }
+
 }

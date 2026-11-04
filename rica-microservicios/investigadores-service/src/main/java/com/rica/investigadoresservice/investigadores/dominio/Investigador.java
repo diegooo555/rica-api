@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "investigadores")
@@ -27,6 +29,10 @@ public class Investigador {
     @Column(name = "grupo_investigacion", length = 150)
     private String grupoInvestigacion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false, length = 20)
+    private EstadoInvestigador estado = EstadoInvestigador.ACTIVO;
+
     public Investigador() {
     }
 
@@ -36,6 +42,26 @@ public class Investigador {
         this.nombreCompleto = nombreCompleto;
         this.correoInstitucional = correoInstitucional;
         this.grupoInvestigacion = grupoInvestigacion;
+    }
+
+    /**
+     * Primer paso de la Saga de eliminación: el investigador queda bloqueado (no acepta
+     * publicaciones nuevas) hasta que los demás servicios confirmen. Es idempotente.
+     */
+    public void marcarEnEliminacion() {
+        this.estado = EstadoInvestigador.EN_ELIMINACION;
+    }
+
+    public boolean estaEnEliminacion() {
+        return estado == EstadoInvestigador.EN_ELIMINACION;
+    }
+
+    public boolean aceptaPublicaciones() {
+        return estado == EstadoInvestigador.ACTIVO;
+    }
+
+    public EstadoInvestigador getEstado() {
+        return estado;
     }
 
     public Long getId() {

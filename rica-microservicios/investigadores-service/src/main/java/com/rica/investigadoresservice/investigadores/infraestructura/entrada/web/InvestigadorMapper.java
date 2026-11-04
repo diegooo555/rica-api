@@ -21,7 +21,8 @@ public class InvestigadorMapper {
         return new InvestigadorResponse(
                 investigador.getId(),
                 investigador.getNombreCompleto(),
-                investigador.getGrupoInvestigacion());
+                investigador.getGrupoInvestigacion(),
+                investigador.getEstado().name());
     }
 
 }

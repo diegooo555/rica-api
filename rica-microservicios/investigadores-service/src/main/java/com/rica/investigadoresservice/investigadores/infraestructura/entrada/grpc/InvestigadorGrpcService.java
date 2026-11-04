@@ -38,7 +38,9 @@ public class InvestigadorGrpcService extends InvestigadorGrpcGrpc.InvestigadorGr
 
     @Override
     public void existeInvestigadorPorCorreo(CorreoRequest request, StreamObserver<InvestigadorResponse> responseObserver) {
-        responder(investigadorUseCase.buscarPorCorreo(request.getCorreoInstitucional()), responseObserver);
+        // Bloqueo semántico: un investigador EN_ELIMINACION ya no cuenta como existente para registrar publicaciones.
+        responder(investigadorUseCase.buscarPorCorreo(request.getCorreoInstitucional())
+                .filter(Investigador::aceptaPublicaciones), responseObserver);
     }
 
     private void responder(Optional<Investigador> encontrado, StreamObserver<InvestigadorResponse> responseObserver) {

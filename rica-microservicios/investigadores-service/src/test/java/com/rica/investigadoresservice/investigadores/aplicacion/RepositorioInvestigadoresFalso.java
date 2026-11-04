@@ -40,4 +40,9 @@ class RepositorioInvestigadoresFalso implements RepositorioInvestigadores {
         almacen.put(investigador.getId(), investigador);
         return investigador;
     }
+
+    @Override
+    public void eliminar(Investigador investigador) {
+        almacen.remove(investigador.getId());
+    }
 }
