@@ -23,6 +23,7 @@ public class PublicacionMapper {
         response.setTipo(publicacion.getTipo());
         response.setAnio(publicacion.getAnio());
         response.setDetalles(publicacion.getDetalles());
+        response.setHuerfana(publicacion.isHuerfana());
         return response;
     }
 

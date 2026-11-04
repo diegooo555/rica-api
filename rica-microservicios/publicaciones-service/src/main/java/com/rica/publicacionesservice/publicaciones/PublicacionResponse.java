@@ -17,6 +17,7 @@ public class PublicacionResponse {
     @NotNull
     private Integer anio;
     private Map<String, String> detalles;
+    private boolean huerfana;
 
     public PublicacionResponse() {
     }
@@ -67,5 +68,13 @@ public class PublicacionResponse {
 
     public void setDetalles(Map<String, String> detalles) {
         this.detalles = detalles;
+    }
+
+    public boolean isHuerfana() {
+        return huerfana;
+    }
+
+    public void setHuerfana(boolean huerfana) {
+        this.huerfana = huerfana;
     }
 }

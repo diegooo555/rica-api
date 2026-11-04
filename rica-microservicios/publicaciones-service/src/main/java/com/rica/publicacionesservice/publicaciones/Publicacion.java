@@ -16,6 +16,7 @@ public class Publicacion {
     private String tipo;
     private Integer anio;
     private Map<String, String> detalles;
+    private boolean huerfana;
 
     public Publicacion() {
     }
@@ -26,6 +27,15 @@ public class Publicacion {
         this.titulo = titulo;
         this.tipo = tipo;
         this.anio = anio;
+    }
+
+    /** Paso 2 de la Saga de eliminación: el autor dejó de existir, la publicación se conserva marcada. */
+    public void marcarComoHuerfana() {
+        this.huerfana = true;
+    }
+
+    public boolean isHuerfana() {
+        return huerfana;
     }
 
     public String getId() {

@@ -8,6 +8,12 @@ spring:
   mongodb:
     uri: mongodb://localhost:27017/rica
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: publicaciones-service
+      auto-offset-reset: earliest
+
   grpc:
     client:
       channel:
