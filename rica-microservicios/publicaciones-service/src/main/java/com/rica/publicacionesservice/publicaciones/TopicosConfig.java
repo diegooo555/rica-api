@@ -15,6 +15,11 @@ public class TopicosConfig {
     }
 
     @Bean
+    public NewTopic publicacionesRegistradas() {
+        return TopicBuilder.name(PublicadorEventosPublicaciones.TOPICO_PUBLICACION_REGISTRADA).partitions(1).replicas(1).build();
+    }
+
+    @Bean
     public NewTopic publicacionesMarcadasHuerfanas() {
         return TopicBuilder.name(InvestigadorEnEliminacionListener.TOPICO_CONFIRMACION).partitions(1).replicas(1).build();
     }

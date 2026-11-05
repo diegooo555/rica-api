@@ -26,6 +26,9 @@ class PublicacionServiceTest {
     @Mock
     private LimitePublicacionesAnualesService limitePublicacionesAnualesService;
 
+    @Mock
+    private PublicadorEventosPublicaciones publicadorEventos;
+
     @InjectMocks
     private PublicacionService publicacionService;
 
@@ -38,9 +41,13 @@ class PublicacionServiceTest {
         Publicacion entrada = nuevaPublicacion();
         when(verificadorInvestigador.existe("ana.torres@uptc.edu.co")).thenReturn(true);
         when(limitePublicacionesAnualesService.puedeRegistrar("ana.torres@uptc.edu.co", 2026)).thenReturn(true);
-        when(publicacionRepository.save(entrada)).thenReturn(entrada);
+        Publicacion guardada = new Publicacion("abc123", "ana.torres@uptc.edu.co", "Arquitecturas evolutivas", "articulo", 2026);
+        when(publicacionRepository.save(entrada)).thenReturn(guardada);
 
-        assertThat(publicacionService.registrar(entrada)).isSameAs(entrada);
+        Publicacion resultado = publicacionService.registrar(entrada);
+
+        assertThat(resultado.getId()).isEqualTo("abc123");
+        verify(publicadorEventos).publicacionRegistrada(guardada);
     }
 
     @Test
@@ -51,6 +58,8 @@ class PublicacionServiceTest {
         assertThatThrownBy(() -> publicacionService.registrar(entrada))
                 .isInstanceOf(RecursoNoEncontradoException.class);
         verify(publicacionRepository, never()).save(any());
+        // el comando falla: no hay hecho que anunciar
+        verify(publicadorEventos, never()).publicacionRegistrada(any());
     }
 
     @Test
@@ -62,5 +71,6 @@ class PublicacionServiceTest {
         assertThatThrownBy(() -> publicacionService.registrar(entrada))
                 .isInstanceOf(LimiteAnualExcedidoException.class);
         verify(publicacionRepository, never()).save(any());
+        verify(publicadorEventos, never()).publicacionRegistrada(any());
     }
 }

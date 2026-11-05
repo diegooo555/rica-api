@@ -129,4 +129,19 @@ class InvestigadorServiceTest {
         verify(repositorioInvestigadores, never()).eliminar(activo);
     }
 
+    @Test
+    void confirmarEliminacionBorraAlInvestigadorYPublicaElEventoEliminado() {
+        Investigador enEliminacion = new Investigador(1L, "Ana Torres", new CorreoInstitucional("ana.torres@uptc.edu.co"), "GIT-UPTC");
+        enEliminacion.marcarEnEliminacion();
+        when(repositorioInvestigadores.buscarPorCorreo("ana.torres@uptc.edu.co")).thenReturn(Optional.of(enEliminacion));
+
+        investigadorService.confirmarEliminacion("ana.torres@uptc.edu.co");
+
+        verify(repositorioInvestigadores).eliminar(enEliminacion);
+        verify(publicadorEventos).publicar(
+                "investigadores.eliminados",
+                "ana.torres@uptc.edu.co",
+                java.util.Map.of("correoInstitucional", "ana.torres@uptc.edu.co"));
+    }
+
 }
