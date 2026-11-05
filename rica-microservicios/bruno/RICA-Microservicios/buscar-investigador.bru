@@ -1,0 +1,10 @@
+meta {
+  name: Buscar investigador por id
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{gateway}}/api/investigadores/{{investigadorId}}
+  body: none
+}

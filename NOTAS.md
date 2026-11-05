@@ -72,3 +72,57 @@ GET  :8081/api/status        -> {"servicio":"publicaciones-service","estado":"op
 POST :8080/api/investigadores -> 201
 POST :8081/api/publicaciones (correo inventado) -> 201   <- brecha esperada, la cierra la Lección 6
 ```
+
+## Taller Lección 6 · Comunicación entre microservicios
+
+### Qué se construyó
+
+| Necesidad | Antes (un proceso) | Ahora |
+|---|---|---|
+| ¿Existe este investigador? | Llamada de método a `InvestigadorRepository` | gRPC `ExisteInvestigadorPorCorreo` protegido con Circuit Breaker |
+| Notificar que se registró un investigador | No aplicaba | `investigadores.registrados` vía Transactional Outbox → Kafka |
+| El frontend consulta ambos recursos | Dos llamadas directas a rica-api | Una sola entrada: Gateway en `:8000`, rutas `lb://` resueltas con Eureka |
+| Eliminar un investigador con publicaciones | Transacción en memoria | Saga coreografiada con bloqueo semántico (`EN_ELIMINACION`) |
+
+### Decisiones y por qué
+
+- **gRPC para la verificación** (síncrona): `publicaciones-service` necesita la respuesta *antes* de guardar.
+  Es tráfico interno entre servicios, con contrato tipado en `investigador.proto`. El frontend sigue usando REST.
+  Se agregó la operación por **correo** (la guía solo traía la de id) porque es el dato que tiene una publicación.
+- **El adaptador gRPC usa el puerto primario** `InvestigadorUseCase`, no el repositorio: un adaptador de entrada no
+  debe saltarse la capa de aplicación (igual que el controlador REST).
+- **Circuit Breaker (Resilience4j, vía Spring Cloud CircuitBreaker)**: ventana de 10 llamadas, se abre con 50 % de
+  fallos, espera 10 s, plazo gRPC de 2 s. Con el circuito abierto la respuesta es **503 en milisegundos**.
+  Se eligió **fallar cerrado** (no registrar) en lugar de aceptar la publicación sin verificar: es preferible
+  pedir un reintento a guardar datos de un autor que quizá no existe.
+- **Transactional Outbox**: el evento se guarda en `outbox_events` en la misma transacción que el investigador.
+  Si Kafka está caído no se pierde nada; `RelayOutbox` lo publica en orden cuando vuelva (al menos una vez).
+- **Saga coreografiada** en tres pasos; cada paso es idempotente (repetir un evento no rompe nada), porque Kafka
+  entrega "al menos una vez". Mientras dura, el investigador está `EN_ELIMINACION`: no se borra, pero tampoco
+  acepta publicaciones nuevas (el gRPC responde `existe=false`).
+- **Gateway**: Spring Cloud Gateway (2025.1) usa ahora el prefijo `spring.cloud.gateway.server.webflux.routes`.
+  El filtro `RequestRateLimiter` de la guía requiere Redis; se deja fuera para no agregar otra pieza de infraestructura.
+- **Contrato duplicado**: cada servicio guarda su copia de `investigador.proto` con su propio `java_package`;
+  lo que debe coincidir es el `package rica.investigadores` y los mensajes.
+
+### Evidencia (todo por el Gateway, puerto 8000)
+
+```text
+POST /api/investigadores (Ana)                 -> 201 {"estado":"ACTIVO"}
+POST /api/publicaciones (ana, x2)              -> 201 (gRPC confirmó al autor)
+POST /api/publicaciones (inventado@uptc.edu.co)-> 404 No existe un investigador con correo ...
+DELETE /api/investigadores/1                   -> 202
+GET /api/investigadores/1 (inmediato)          -> 200 {"estado":"EN_ELIMINACION"}
+GET /api/investigadores/1 (segundos después)   -> 404
+GET /api/publicaciones?investigadorCorreo=ana  -> 200, ambas con "huerfana": true
+
+Logs:
+  Outbox: evento 1 publicado en investigadores.registrados
+  Outbox: evento 2 publicado en investigadores.en-eliminacion
+  Saga: 2 publicaciones de ana.torres@uptc.edu.co marcadas como huérfanas
+  Saga: publicaciones confirmó para ana.torres@uptc.edu.co. Eliminando investigador.
+
+Con investigadores-service detenido:
+  POST /api/publicaciones -> 503 en ~5 ms
+  CallNotPermittedException: CircuitBreaker 'investigadores' is OPEN and does not permit further calls
+```

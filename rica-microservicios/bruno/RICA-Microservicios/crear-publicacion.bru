@@ -1,0 +1,26 @@
+meta {
+  name: Crear publicacion
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{gateway}}/api/publicaciones
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "investigadorCorreo": "{{correo}}",
+    "titulo": "Arquitecturas evolutivas en la universidad publica",
+    "tipo": "articulo",
+    "anio": 2026,
+    "detalles": {
+      "revista": "Revista Colombiana de Computacion"
+    }
+  }
+}

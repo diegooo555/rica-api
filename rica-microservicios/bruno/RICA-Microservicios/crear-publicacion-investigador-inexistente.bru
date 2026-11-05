@@ -1,0 +1,23 @@
+meta {
+  name: Crear publicacion (investigador inexistente)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{gateway}}/api/publicaciones
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "investigadorCorreo": "nadie@uptc.edu.co",
+    "titulo": "No deberia registrarse",
+    "tipo": "libro",
+    "anio": 2026
+  }
+}

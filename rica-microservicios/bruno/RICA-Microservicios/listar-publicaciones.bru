@@ -1,0 +1,10 @@
+meta {
+  name: Listar publicaciones de un investigador
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{gateway}}/api/publicaciones?investigadorCorreo={{correo}}
+  body: none
+}

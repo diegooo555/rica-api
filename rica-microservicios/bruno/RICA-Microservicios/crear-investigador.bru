@@ -1,0 +1,22 @@
+meta {
+  name: Crear investigador
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{gateway}}/api/investigadores
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "nombreCompleto": "Luis Mora",
+    "correoInstitucional": "{{correo}}",
+    "grupoInvestigacion": "GIT-UPTC"
+  }
+}

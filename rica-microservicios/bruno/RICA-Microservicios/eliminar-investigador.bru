@@ -1,0 +1,10 @@
+meta {
+  name: Eliminar investigador
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{gateway}}/api/investigadores/{{investigadorId}}
+  body: none
+}
