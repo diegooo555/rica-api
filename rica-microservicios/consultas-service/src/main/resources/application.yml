@@ -12,7 +12,8 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
-      group-id: consultas-service-v1
+      # Grupo nuevo = Kafka no recuerda nada: con earliest se reproducen todos los eventos (reconstrucción)
+      group-id: consultas-service-v2
       auto-offset-reset: earliest
 
 eureka:

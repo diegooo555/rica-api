@@ -126,3 +126,48 @@ Con investigadores-service detenido:
   POST /api/publicaciones -> 503 en ~5 ms
   CallNotPermittedException: CircuitBreaker 'investigadores' is OPEN and does not permit further calls
 ```
+
+## Taller Lección 8 · CQRS: una ficha de investigador alimentada por eventos
+
+### El plan
+
+| Servicio | Lado | Qué hace |
+|---|---|---|
+| `investigadores-service` | Escritura | Publica `investigadores.registrados`, `.en-eliminacion` y ahora `.eliminados` (por el Outbox) |
+| `publicaciones-service` | Escritura | Publica `publicaciones.registradas` solo después de guardar con éxito |
+| `consultas-service` (nuevo) | Lectura | Escucha los cuatro eventos y mantiene `fichas_investigador` en su propia base `rica_consultas` |
+
+### Evidencias
+
+1. **Ficha con dos publicaciones**, sin que `consultas-service` llame a ningún otro servicio:
+   ```json
+   {"correo":"luis.mora@uptc.edu.co","nombreCompleto":"Luis Mora","estado":"ACTIVO","totalPublicaciones":2,
+    "publicaciones":[{"titulo":"Microservicios en la UPTC",...},{"titulo":"CQRS en la practica",...}]}
+   ```
+2. **Ranking** (`/api/consultas/ranking?top=3`): `luis.mora 2`, `ana.torres 1`.
+3. **Log** de `consultas-service`:
+   ```text
+   Proyección: ficha de luis.mora@uptc.edu.co actualizada (registro)
+   Proyección: ficha de luis.mora@uptc.edu.co ahora tiene 2 publicaciones
+   Proyección: luis.mora@uptc.edu.co marcado EN_ELIMINACION
+   Proyección: ficha de luis.mora@uptc.edu.co eliminada
+   ```
+   Con `consultas-service` detenido se registró otra publicación (**201**); al arrancarlo, el total subió a 3 sin reenviar nada.
+4. **Ficha eliminada tras la Saga**: `GET /api/consultas/investigadores/luis.mora@uptc.edu.co` → **404** "No hay ficha para el investigador".
+5. **Reconstrucción** (colección borrada + `group-id: consultas-service-v2`): las fichas reaparecieron solas.
+   Luis **resucitó** (`ACTIVO`, 3 publicaciones): en el log, `marcado EN_ELIMINACION` y `eliminada` se procesaron
+   *antes* que `actualizada (registro)`. Es la trampa descrita en el taller: Kafka no garantiza orden entre tópicos
+   distintos. En producción se evita publicando todos los eventos de un agregado en **un solo tópico con versión**.
+
+### ¿Qué se vería distinto si lectura y escritura fueran el mismo modelo?
+
+1. La ficha exigiría un *join* entre PostgreSQL (investigadores) y MongoDB (publicaciones) en cada consulta, cruzando dos servicios por red.
+2. El ranking necesitaría contar publicaciones de todos los investigadores en cada petición en vez de ordenar un campo ya guardado.
+3. Si el servicio de lectura cae, hoy la escritura sigue (201); con un solo modelo, una consulta pesada degradaría también los comandos.
+4. La eliminación sería inmediata y transaccional, pero acoplaría los dos servicios en una transacción distribuida.
+5. No se podría "borrar y reconstruir" la vista: el modelo único es la fuente de verdad.
+
+### Notas técnicas
+
+- Spring Boot 4 renombró `spring.data.mongodb.uri` a `spring.mongodb.uri`; se usa la clave nueva.
+- Se usa Jackson 3 (`tools.jackson.databind.ObjectMapper`), el que autoconfigura Spring Boot 4.

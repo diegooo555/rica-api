@@ -7,7 +7,8 @@ Monorepo con los servicios en que se dividió `rica-api`.
 | `eureka-server` | 8761 | — | Registro y descubrimiento de servicios |
 | `gateway` | 8000 | — | Punto de entrada único (Spring Cloud Gateway) |
 | `investigadores-service` | 8080 (HTTP), 9090 (gRPC) | PostgreSQL + Kafka | Investigadores, Outbox, Saga de eliminación |
-| `publicaciones-service` | 8081 | MongoDB | Publicaciones, cliente gRPC con Circuit Breaker |
+| `publicaciones-service` | 8081 | MongoDB (`rica`) | Publicaciones, cliente gRPC con Circuit Breaker |
+| `consultas-service` | 8083 | MongoDB (`rica_consultas`) | Lado de lectura (CQRS): fichas alimentadas por eventos |
 
 ## Comunicación
 
@@ -19,8 +20,10 @@ Monorepo con los servicios en que se dividió `rica-api`.
 
 | Tópico | Publica | Consume |
 |---|---|---|
-| `investigadores.registrados` | investigadores (outbox) | — |
-| `investigadores.en-eliminacion` | investigadores (outbox) | publicaciones |
+| `investigadores.registrados` | investigadores (outbox) | consultas |
+| `investigadores.en-eliminacion` | investigadores (outbox) | publicaciones, consultas |
+| `investigadores.eliminados` | investigadores (outbox) | consultas |
+| `publicaciones.registradas` | publicaciones | consultas |
 | `publicaciones.marcadas-huerfanas` | publicaciones | investigadores |
 
 ### Saga de eliminación (coreografía)
@@ -30,6 +33,12 @@ Monorepo con los servicios en que se dividió `rica-api`.
 2. `publicaciones-service` marca sus publicaciones como huérfanas y publica `publicaciones.marcadas-huerfanas`.
 3. `investigadores-service` recibe la confirmación y borra al investigador.
 
+## CQRS
+
+`consultas-service` solo responde `GET` (`/api/consultas/investigadores`, `/investigadores/{correo}`, `/ranking`).
+Mantiene una ficha por investigador con sus publicaciones embebidas, construida a partir de los eventos.
+No es la fuente de verdad: se puede borrar y reconstruir cambiando el `group-id` del consumidor.
+
 ## Cómo correrlo
 
 ```bash
@@ -38,6 +47,6 @@ cd publicaciones-service && docker compose up -d && cd ..    # MongoDB
 ```
 
 Luego, cada uno en su terminal y en este orden: `eureka-server`, `investigadores-service`,
-`publicaciones-service`, `gateway` (`./mvnw spring-boot:run` dentro de cada carpeta).
+`publicaciones-service`, `consultas-service`, `gateway` (`./mvnw spring-boot:run` dentro de cada carpeta).
 
 La colección de Bruno está en [`bruno/RICA-Microservicios`](bruno/RICA-Microservicios) y apunta al Gateway.
