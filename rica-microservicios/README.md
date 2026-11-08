@@ -39,6 +39,13 @@ Monorepo con los servicios en que se dividió `rica-api`.
 Mantiene una ficha por investigador con sus publicaciones embebidas, construida a partir de los eventos.
 No es la fuente de verdad: se puede borrar y reconstruir cambiando el `group-id` del consumidor.
 
+## Consumidores robustos (EDA)
+
+- **Dead Letter Topic:** un mensaje que no se puede procesar (JSON roto) va directo a `investigadores.registrados.DLT`
+  con cabeceras de diagnóstico; los errores transitorios se reintentan con backoff exponencial (1 s, 2 s, 4 s).
+- **Consumidor idempotente:** `/api/consultas/estadisticas` cuenta altas registrando cada evento procesado
+  (`tópico-partición-offset`) en `eventos_procesados`; reentregar mensajes no cambia el total.
+
 ## Cómo correrlo
 
 ```bash

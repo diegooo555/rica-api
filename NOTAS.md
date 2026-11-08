@@ -171,3 +171,58 @@ Con investigadores-service detenido:
 
 - Spring Boot 4 renombró `spring.data.mongodb.uri` a `spring.mongodb.uri`; se usa la clave nueva.
 - Se usa Jackson 3 (`tools.jackson.databind.ObjectMapper`), el que autoconfigura Spring Boot 4.
+
+## Taller Lección 9 · EDA: consumidores que resisten duplicados, errores y mensajes venenosos
+
+### Evidencias
+
+1. **Línea base (sin defensas)** — un mensaje `esto no es json` en `investigadores.registrados`:
+   ```text
+   ERROR o.s.kafka.listener.DefaultErrorHandler : Backoff FixedBackOffExecution[interval=0, currentAttempts=10, maxAttempts=9]
+         exhausted for investigadores.registrados-0@2
+   ```
+   Diez intentos sin pausa (la partición detenida mientras tanto) y el mensaje se descarta sin rastro recuperable.
+2. **Con `ManejoErroresConfig`** — el mismo mensaje va directo a la DLT, sin reintentos (es `JacksonException`):
+   ```text
+   kafka_dlt-original-topic:investigadores.registrados
+   kafka_dlt-exception-fqcn:org.springframework.kafka.listener.ListenerExecutionFailedException
+   kafka_dlt-exception-cause-fqcn:tools.jackson.core.exc.StreamReadException
+   valor: esto no es json (3)
+   ```
+   **Hallazgo:** en Spring Kafka 4 el `DeadLetterPublishingRecoverer` usa por defecto el sufijo `-dlt`
+   (el primer intento terminó en `investigadores.registrados-dlt`). Se fijó el nombre `<tópico>.DLT` con un
+   *destination resolver* explícito para que coincida con el tópico declarado.
+3. **Contador ingenuo** — `N = 2`, alta de Sofía → `N + 1 = 3`. Tras reiniciar el grupo `consultas-estadisticas`
+   al inicio del tópico: **6**. Cada alta se contó dos veces sin una sola excepción en el log.
+4. **Consumidor idempotente** — colecciones limpiadas, grupo al inicio: **3**. Repetido otra vez: **3**.
+   ```text
+   Estadísticas: evento investigadores.registrados-0-0 ya procesado, se ignora
+   Estadísticas: evento investigadores.registrados-0-1 ya procesado, se ignora
+   Estadísticas: mensaje no válido en investigadores.registrados-0@2, no se cuenta
+   ```
+
+### Paso 7 · ¿Qué hacemos con la DLT?
+
+1. **¿Quién se entera y cómo?** El equipo dueño del consumidor (consultas-service). Una métrica con el tamaño/lag de
+   `*.DLT` y una alerta cuando sea mayor que 0 durante más de unos minutos, visible en el tablero del servicio.
+   El correo solo para la alerta, no por cada mensaje.
+2. **¿Cómo se reprocesa?** Con una herramienta aparte (un pequeño consumidor o un endpoint de administración) que lee
+   la DLT, permite revisar el mensaje y lo reenvía al tópico original una vez corregido el error. Reenviar a ciegas
+   todo el contenido de la DLT repetiría los mensajes que siguen siendo inválidos.
+3. **¿Cuándo descartar?** Cuando el mensaje es basura irrecuperable (como `esto no es json`) o el hecho ya no tiene
+   efecto. Lo decide una persona del equipo dueño, dejando registro de qué se descartó y por qué.
+4. **¿Y si es válido pero llegó a destiempo?** Reprocesarlo puede ser peligroso (p. ej. resucitar una ficha eliminada,
+   como se vio en CQRS). Hace falta versión o marca de tiempo del evento para descartar lo que llegue después
+   de un estado más nuevo; es justo lo que la observabilidad de la Lección 10 ayuda a diagnosticar.
+
+### ¿Por qué reintentar un mensaje venenoso sin fin es peor que perderlo y peor que una DLT?
+
+Reintentarlo sin fin bloquea la partición: ningún mensaje posterior se procesa, así que un solo mensaje roto detiene
+todo el flujo, cosa que perderlo no hace. La DLT da lo mejor de ambos: el consumidor sigue de inmediato y el mensaje
+queda guardado con su diagnóstico para revisarlo y, si corresponde, reprocesarlo.
+
+### Límites conocidos
+
+- Los ids por posición no detectan duplicados del **productor** (dos publicaciones del mismo hecho tienen offsets
+  distintos). Para eso el evento debe llevar su propio id de negocio, por ejemplo el id del Outbox.
+- Registrar el id y sumar son dos escrituras: si el proceso cae entre ambas se pierde un conteo.
