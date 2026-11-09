@@ -3,6 +3,7 @@ package com.rica.investigadoresservice.investigadores.infraestructura.entrada.me
 import com.rica.investigadoresservice.investigadores.aplicacion.InvestigadorUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -29,7 +30,11 @@ public class PublicacionesMarcadasListener {
     public void alMarcarsePublicaciones(String mensaje) {
         JsonNode evento = objectMapper.readTree(mensaje);
         String correo = evento.get("correoInstitucional").asString();
-        log.info("Saga: publicaciones confirmó para {}. Eliminando investigador.", correo);
-        investigadorService.confirmarEliminacion(correo);
+        // Se retoma el id de correlación que venía en el evento para seguir la misma traza
+        String correlationId = evento.has("correlationId") ? evento.get("correlationId").asString() : "";
+        try (MDC.MDCCloseable ignorado = MDC.putCloseable("correlationId", correlationId)) {
+            log.info("Saga: publicaciones confirmó para {}. Eliminando investigador.", correo);
+            investigadorService.confirmarEliminacion(correo);
+        }
     }
 }

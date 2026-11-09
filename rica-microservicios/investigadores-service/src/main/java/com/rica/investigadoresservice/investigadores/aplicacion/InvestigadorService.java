@@ -2,6 +2,8 @@ package com.rica.investigadoresservice.investigadores.aplicacion;
 
 import com.rica.investigadoresservice.investigadores.dominio.Investigador;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +15,8 @@ import java.util.Optional;
 
 @Service
 public class InvestigadorService implements InvestigadorUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(InvestigadorService.class);
 
     private final RepositorioInvestigadores repositorioInvestigadores;
     private final InvestigadorFactory investigadorFactory;
@@ -67,6 +71,7 @@ public class InvestigadorService implements InvestigadorUseCase {
         if (investigador.estaEnEliminacion()) {
             return; // la Saga ya está en curso: repetir la petición no publica otro evento
         }
+        log.info("Saga: inicia la eliminación de {}", investigador.getCorreoInstitucional().valor());
         investigador.marcarEnEliminacion();
         repositorioInvestigadores.guardar(investigador);
         publicadorEventos.publicar("investigadores.en-eliminacion", investigador.getCorreoInstitucional().valor(), Map.of(

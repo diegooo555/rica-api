@@ -37,6 +37,17 @@ class InvestigadorEnEliminacionListenerTest {
     }
 
     @Test
+    void laConfirmacionConservaElIdDeCorrelacionDelEvento() {
+        when(repositorio.findByInvestigadorCorreo("ana.torres@uptc.edu.co")).thenReturn(List.of());
+
+        listener.alIniciarseEliminacion(
+                "{\"correoInstitucional\":\"ana.torres@uptc.edu.co\",\"correlationId\":\"demo-001\"}");
+
+        verify(kafkaTemplate).send(eq("publicaciones.marcadas-huerfanas"), eq("ana.torres@uptc.edu.co"),
+                contains("\"correlationId\":\"demo-001\""));
+    }
+
+    @Test
     void confirmaAunqueElInvestigadorNoTengaPublicaciones() {
         when(repositorio.findByInvestigadorCorreo("luis.mora@uptc.edu.co")).thenReturn(List.of());
 
