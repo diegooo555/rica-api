@@ -46,6 +46,13 @@ No es la fuente de verdad: se puede borrar y reconstruir cambiando el `group-id`
 - **Consumidor idempotente:** `/api/consultas/estadisticas` cuenta altas registrando cada evento procesado
   (`tópico-partición-offset`) en `eventos_procesados`; reentregar mensajes no cambia el total.
 
+## Observabilidad
+
+- `GET /actuator/health` y `/actuator/metrics` en investigadores (8080), publicaciones (8081) y consultas (8083).
+- Cada línea de log muestra `[servicio,idDeCorrelacion]`. El id entra por la cabecera `X-Correlation-Id`
+  (o se genera), viaja dentro de los eventos del Outbox y cada listener lo vuelve a poner en el MDC:
+  buscar un solo id en los logs reconstruye la Saga completa a través de los tres servicios.
+
 ## Cómo correrlo
 
 ```bash

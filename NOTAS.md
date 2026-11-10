@@ -226,3 +226,63 @@ queda guardado con su diagnóstico para revisarlo y, si corresponde, reprocesarl
 - Los ids por posición no detectan duplicados del **productor** (dos publicaciones del mismo hecho tienen offsets
   distintos). Para eso el evento debe llevar su propio id de negocio, por ejemplo el id del Outbox.
 - Registrar el id y sumar son dos escrituras: si el proceso cae entre ambas se pierde un conteo.
+
+## Taller Lección 10 · Observabilidad: seguir una Saga con un id de correlación
+
+### Línea base (paso 2)
+
+Antes del cambio, al eliminar un investigador las tres terminales escribían líneas de la Saga sin nada que dijera a
+qué petición pertenecía cada una. Con diez eliminaciones simultáneas sería imposible separarlas.
+
+### Evidencias
+
+1. **`/actuator/health`** — los tres servicios `UP`:
+   - investigadores (8080): componentes `db` (PostgreSQL), `discoveryComposite`, `diskSpace`, `ping`, …
+   - publicaciones (8081) y consultas (8083): componente `mongo`, `discoveryComposite`, …
+2. **Logs con `demo-001`** (`DELETE /api/investigadores/{id}` por el Gateway con `X-Correlation-Id: demo-001`,
+   la respuesta devuelve la misma cabecera):
+   ```text
+   [investigadores-service,demo-001] Saga: inicia la eliminación de mateo.diaz@uptc.edu.co
+   [publicaciones-service,demo-001]  Saga: 2 publicaciones de mateo.diaz@uptc.edu.co marcadas como huérfanas
+   [investigadores-service,demo-001] Saga: publicaciones confirmó para mateo.diaz@uptc.edu.co. Eliminando investigador.
+   ```
+   **Brecha en consultas-service:** sus líneas salían como `[consultas-service,]`, porque `ProyeccionListener` no
+   leía el id del mensaje. **Cambio que la cierra (aplicado):** el mismo patrón del paso 5 — leer `correlationId`
+   del JSON y envolver la proyección en `MDC.putCloseable(...)`. Un mensaje ilegible se deja pasar sin id para que
+   el proyector falle y vaya a la DLT como antes. Resultado con `demo-002`:
+   ```text
+   [consultas-service,demo-002] Proyección: valeria.pinto@uptc.edu.co marcado EN_ELIMINACION
+   [consultas-service,demo-002] Proyección: ficha de valeria.pinto@uptc.edu.co eliminada
+   ```
+3. **Métricas** (`/actuator/metrics/http.server.requests` de investigadores-service, método RED):
+   `COUNT=10`, `TOTAL_TIME=0.4885 s`, `MAX=0.2673 s`; con `?tag=status:404`: `COUNT=1`.
+   En Spring Boot 4.1.1 `/actuator/metrics` respondió sin agregar `spring-boot-starter-micrometer-metrics`.
+
+   **Lag** del grupo `consultas-service-v2` en `investigadores.registrados`:
+
+   | Momento | CURRENT-OFFSET | LOG-END-OFFSET | LAG |
+   |---|---|---|---|
+   | Al día | 10 | 10 | 0 |
+   | consultas detenido + 3 altas | 10 | 13 | **3** |
+   | Tras arrancar | 13 | 13 | 0 |
+4. **Saga atascada** (`publicaciones-service` detenido, eliminación con `demo-002`):
+   - `GET /api/consultas/investigadores?estado=EN_ELIMINACION` → `valeria.pinto@uptc.edu.co EN_ELIMINACION`
+   - Lag de `publicaciones-service` en `investigadores.en-eliminacion`: **1**
+   - Al arrancar `publicaciones-service` la Saga continuó sola; ficha e investigador → 404, y `demo-002` aparece
+     en los tres servicios: el id sobrevivió a la pausa porque viaja dentro del evento guardado en Kafka.
+
+### Paso 9 · Discusión: ¿y si nunca vuelve?
+
+1. **Estado y quién se entera.** El investigador quedaría para siempre `EN_ELIMINACION`: ni se borra ni acepta
+   publicaciones (el bloqueo semántico se vuelve permanente). Hoy nadie se daría cuenta salvo que alguien mire el lag
+   o la consulta de fichas en ese estado; el usuario solo vería que el investigador "no termina de borrarse".
+2. **Compensación.** `publicaciones-service` publicaría `publicaciones.marcado-fallido` (con el correo y el
+   `correlationId`); lo consumiría `investigadores-service`, que devolvería al investigador a `ACTIVO` y publicaría
+   `investigadores.eliminacion-cancelada` para que consultas-service también revierta la ficha. Sería idempotente:
+   volver a `ACTIVO` a alguien que ya está `ACTIVO` no cambia nada, y solo se compensa si sigue `EN_ELIMINACION`.
+3. **Métrica y alerta.** Un *gauge* `rica.saga.eliminacion.atascadas` = investigadores en `EN_ELIMINACION` desde
+   hace más de 10 minutos (requiere guardar la fecha de inicio). Alerta si es mayor que 0 durante 5 minutos,
+   junto con una alerta de lag > 0 sostenido en el grupo `publicaciones-service`.
+4. **¿Coreografía u orquestación con cuatro pasos más?** Orquestada. Con siete pasos el flujo repartido entre
+   listeners se vuelve difícil de seguir y de compensar; un orquestador (en investigadores-service) guarda el estado
+   de cada Saga, sabe qué paso falló y qué compensar, y da un único lugar para medir duración y atascos.
