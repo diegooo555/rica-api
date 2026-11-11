@@ -1,0 +1,35 @@
+name: CI
+
+# Se ejecuta en cada push y en cada Pull Request hacia main
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Pruebas de ${{ matrix.servicio }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio: [eureka-server, gateway, investigadores-service, publicaciones-service, consultas-service]
+    defaults:
+      run:
+        # Los servicios viven en rica-microservicios/ dentro de este repositorio
+        working-directory: rica-microservicios/${{ matrix.servicio }}
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v5
+
+      - name: Instalar Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # Se excluyen las pruebas de arranque completo (*ApplicationTests): necesitan
+      # Kafka, PostgreSQL o MongoDB corriendo. Las pruebas unitarias sí se ejecutan.
+      - name: Ejecutar pruebas
+        run: sh ./mvnw -B -ntp test -Dtest='!*ApplicationTests' -Dsurefire.failIfNoSpecifiedTests=false

@@ -1,2 +1,4 @@
-/mvnw text eol=lf
+# Los scripts de shell deben llevar LF: en Linux (CI, contenedores) CRLF los rompe
+mvnw text eol=lf
+*.sh text eol=lf
 *.cmd text eol=crlf
