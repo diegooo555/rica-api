@@ -6,6 +6,10 @@ spring:
     name: eureka-server
 
 eureka:
+  instance:
+    # Con este nombre Eureka se reconoce a sí mismo y no intenta replicarse
+    # contra "localhost:8761" como si fuera otro nodo (falla dentro de un contenedor).
+    hostname: localhost
   client:
     # Es el registro, no un cliente: no se registra ni consulta a sí mismo.
     register-with-eureka: false

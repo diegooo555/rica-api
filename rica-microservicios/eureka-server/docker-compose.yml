@@ -1,0 +1,8 @@
+services:
+  eureka-server:
+    build: .
+    image: rica/eureka-server:0.1
+    container_name: rica-eureka
+    ports:
+      - "8761:8761"
+    restart: unless-stopped
