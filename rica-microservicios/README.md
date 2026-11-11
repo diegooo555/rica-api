@@ -53,6 +53,13 @@ No es la fuente de verdad: se puede borrar y reconstruir cambiando el `group-id`
   (o se genera), viaja dentro de los eventos del Outbox y cada listener lo vuelve a poner en el MDC:
   buscar un solo id en los logs reconstruye la Saga completa a través de los tres servicios.
 
+## Contenedores e integración continua
+
+- `eureka-server` tiene un `Dockerfile` multi-etapa y su `docker-compose.yml`:
+  `cd eureka-server && docker compose up -d --build` lo deja en `http://localhost:8761`.
+- `.github/workflows/ci.yml` (en la raíz del repositorio) ejecuta las pruebas unitarias de los cinco servicios en
+  paralelo en cada push y en cada Pull Request hacia `main`.
+
 ## Cómo correrlo
 
 ```bash

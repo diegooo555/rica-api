@@ -286,3 +286,91 @@ qué petición pertenecía cada una. Con diez eliminaciones simultáneas sería 
 4. **¿Coreografía u orquestación con cuatro pasos más?** Orquestada. Con siete pasos el flujo repartido entre
    listeners se vuelve difícil de seguir y de compensar; un orquestador (en investigadores-service) guarda el estado
    de cada Saga, sabe qué paso falló y qué compensar, y da un único lugar para medir duración y atascos.
+
+## Taller Lección 11 · Contenedores y CI real para RICA
+
+### Paso 2 · Preguntas sobre el Dockerfile
+
+- **(a) ¿Por qué primero `pom.xml` y luego `src`?** Docker cachea cada capa y la invalida solo si cambian sus
+  entradas. Las dependencias dependen del `pom.xml`, que cambia poco; el código cambia todo el tiempo. Copiando
+  primero el pom, `dependency:go-offline` queda en caché y un cambio de código solo recompila.
+- **(b) ¿Qué contiene la imagen final y qué no?** Solo el JRE 25 de Temurin, un usuario sin privilegios y el `.jar`.
+  No tiene Maven, ni el JDK, ni el código fuente, ni el repositorio local de dependencias: todo eso quedó en la
+  etapa `build`, que se descarta.
+- **(c) ¿Por qué `USER rica`?** Si alguien explota una vulnerabilidad de la aplicación, obtiene los permisos del
+  proceso. Corriendo como un usuario de sistema sin privilegios, no es root dentro del contenedor.
+
+### Evidencias
+
+1. **Imagen** — `docker images rica/eureka-server` → `rica/eureka-server:0.1  589MB`.
+   En `docker history` la capa del `.jar` es `COPY /app/target/*.jar app.jar  60.7MB`.
+2. **Panel de Eureka en contenedor** — `http://localhost:8761` respondió `<title>Eureka</title>` y los cuatro
+   servicios (gateway, investigadores, publicaciones, consultas) se registraron en el contenedor.
+3. **Caché de capas**
+
+   | Construcción | Tiempo | Qué se ejecutó |
+   |---|---|---|
+   | Primera | 99 s | Todo: descarga de dependencias y compilación |
+   | Segunda, sin cambios | ~0 s | Nada: 8 capas `CACHED` |
+   | Tercera, cambio en `application.yml` | 6 s | Solo `COPY src ./src` y `mvn package` (y la copia del jar); `COPY pom.xml` y `dependency:go-offline` salieron `CACHED` |
+
+   **Replicación contra sí mismo:** el log del contenedor mostraba `Adding new peer nodes [http://localhost:8761/eureka/]`
+   y `Replica node URL: http://localhost:8761/eureka/`: Eureka se tomaba como su propio par. En los ~3 minutos que
+   corrió no alcanzaron a aparecer los `SocketTimeoutException`, pero la configuración que los provoca estaba ahí.
+   Con `eureka.instance.hostname: localhost` esas líneas desaparecen.
+   **Compose:** `docker compose up -d --build` reutilizó las 8 capas (`CACHED`) y arrancó en ~3 s.
+   **Variables de entorno:** la misma imagen con `-e SERVER_PORT=9000` sirvió el panel en `:9000` con
+   "No instances available" (los servicios siguen apuntando al 8761).
+4. **GitHub Actions** (rama `taller-contenedores`):
+
+   | Commit | Resultado | Detalle |
+   |---|---|---|
+   | `ci: probar los cinco servicios…` | ✅ success | 5 jobs en verde |
+   | `test: romper la CI a proposito` | ❌ failure | Solo `Pruebas de consultas-service` en rojo; los otros cuatro en verde |
+   | `Revert "test: romper la CI…"` | ✅ success | De vuelta a verde |
+
+   Los `mvnw` de todos los servicios ya estaban guardados con LF; igual se dejó `.gitattributes` con
+   `mvnw text eol=lf` para que un clon en Windows no los rompa.
+
+### Paso 5 · ¿Por qué una sola imagen con configuración por entorno?
+
+Lo que se prueba es exactamente lo que llega a producción: el mismo artefacto, byte a byte, cambiando solo variables.
+Con una imagen por entorno, cada una se construye por separado y podría diferir (dependencias resueltas otro día,
+otra versión del código), y un error de producción no se reproduce en pruebas. Además, los secretos y las URLs no
+quedan horneados dentro de la imagen.
+
+### Paso 6 · Caché a mano con Redis (cache-aside)
+
+```text
+> SET ficha:ana.torres@uptc.edu.co {"nombre":"Ana Torres","publicaciones":3} EX 30   -> OK
+> GET ficha:ana.torres@uptc.edu.co                                                -> {"nombre":"Ana Torres","publicaciones":3}   (hit)
+> TTL ficha:ana.torres@uptc.edu.co                                                -> 30
+  (tras expirar) GET                                                              -> (nil)   (miss: leer de la base y volver a guardar)
+> SET ... EX 300 ; DEL ficha:ana.torres@uptc.edu.co ; GET                          -> 1 ; (nil)   (invalidación al modificar)
+```
+
+**Ejercicio de decisión — RICA (módulo de investigadores y publicaciones):**
+
+| Tipo de dato | Almacén | Por qué | Consulta principal que lo justifica | Costo de añadirlo |
+|---|---|---|---|---|
+| Investigadores | PostgreSQL | Datos estructurados con unicidad de correo y transacciones (Outbox en la misma transacción) | `SELECT … WHERE correo = ?` + `INSERT` del outbox atómico | Ninguno: ya existe |
+| Publicaciones | MongoDB | Campos variables según el tipo (`detalles` de artículo, libro, ponencia…) | `find({investigadorCorreo})` y conteo por año | Ya existe; otra tecnología que operar y respaldar |
+| Fichas de investigador (lectura) | MongoDB (`rica_consultas`) | Documento desnormalizado listo para la pantalla, se reconstruye desde eventos | `findById(correo)` y ranking ordenado por `totalPublicaciones` | Bajo: reutiliza la instancia de Mongo con otra base |
+| Eventos entre servicios | Kafka | Log durable y reproducible: permite reconstruir el modelo de lectura y absorber caídas | Consumir `investigadores.*` desde el offset guardado o desde el inicio | Alto: un clúster más que operar y monitorear (lag, DLT) |
+| Caché de fichas muy consultadas | Redis (solo si hiciera falta) | Lecturas en memoria con TTL e invalidación por evento | `GET ficha:{correo}` | Medio: otra pieza más, invalidación y consistencia que cuidar |
+| Búsqueda por texto en títulos | PostgreSQL `tsvector` o índice de texto de Mongo | El volumen de RICA no justifica Elasticsearch | `WHERE to_tsvector(titulo) @@ plainto_tsquery(?)` | Bajo con el motor existente; alto con un motor dedicado |
+
+**¿Hace falta más de una tecnología?** Para el tamaño de RICA, una relacional bien usada (PostgreSQL con `jsonb`
+para los detalles y `tsvector` para búsquedas) bastaría para investigadores y publicaciones. MongoDB se justifica por
+la variabilidad de las publicaciones y porque el modelo de lectura es un documento natural, y Kafka por la
+comunicación asíncrona y la reconstrucción de vistas. Redis no se justifica hoy: `consultas-service` ya responde con
+una sola lectura por clave; se agregaría solo si las mediciones mostraran latencia o carga real.
+
+### Lectura opcional · ¿Qué haría falta para correr consultas-service en un contenedor?
+
+1. Un `Dockerfile` igual al de `eureka-server`, con `EXPOSE 8083`.
+2. Una red Docker compartida con Kafka, MongoDB y Eureka, y referirse a ellos por nombre de servicio, no `localhost`.
+3. Kafka con dos listeners: uno interno anunciado como `rica-kafka:29092` para los contenedores y otro `localhost:9092` para el host.
+4. Configuración por variables: `SPRING_MONGODB_URI=mongodb://publicaciones-mongo:27017/rica_consultas`,
+   `SPRING_KAFKA_BOOTSTRAP_SERVERS=rica-kafka:29092`, `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://rica-eureka:8761/eureka`.
+5. `depends_on` con *healthchecks* para que no arranque antes que Kafka y MongoDB, y `prefer-ip-address` para que el Gateway lo alcance.
